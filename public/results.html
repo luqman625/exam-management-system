@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Results - Exam System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r min-h-screen p-4 space-y-2">
+      <div class="font-bold text-lg text-slate-800 px-4 py-2 mb-4 border-b">Exam Portal</div>
+      <a href="dashboard.html" class="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Dashboard</a>
+      <a href="examinations.html" class="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Examinations</a>
+      <a href="results.html" class="block px-4 py-2 bg-blue-50 text-blue-600 font-medium rounded-lg">Results</a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-slate-800">Examination Results</h2>
+        <p class="text-sm text-slate-500">View and manage published grades</p>
+      </div>
+
+      <!-- Alert Box -->
+      <div id="alertBox" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
+
+      <!-- Admin / Lecturer Only: Publish Result Form -->
+      <div id="publishSection" class="hidden bg-white p-6 rounded-xl border shadow-sm mb-8">
+        <h3 class="font-bold text-slate-700 mb-4">Publish New Result</h3>
+        <form id="publishForm" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Student ID</label>
+            <input type="number" id="student_id" placeholder="e.g. 5" required class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Exam ID</label>
+            <input type="number" id="examination_id" placeholder="e.g. 1" required class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Marks</label>
+            <input type="number" step="0.01" id="marks" placeholder="0 - 100" min="0" max="100" required class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Grade (Auto)</label>
+            <input type="text" id="grade" placeholder="Auto-calculated" readonly required class="w-full p-2 border rounded text-sm bg-slate-100 font-bold text-blue-600 cursor-not-allowed focus:outline-none">
+          </div>
+          <div class="flex items-end">
+            <button type="submit" id="submitBtn" class="w-full bg-emerald-600 text-white font-medium rounded p-2 hover:bg-emerald-700 transition">Publish Result</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Results Table -->
+      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-100 border-b text-sm font-semibold text-slate-700">
+            <tr>
+              <th class="p-4">Student Name</th>
+              <th class="p-4">Course</th>
+              <th class="p-4">Marks</th>
+              <th class="p-4">Grade</th>
+              <th class="p-4">Status</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody" class="divide-y text-sm">
+            <tr><td colspan="5" class="p-4 text-center text-slate-400">Loading results...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    const token = localStorage.getItem('token');
+
+    // Redirect to login if unauthenticated
+    if (!token || !user) {
+      window.location.href = '/index.html';
+    }
+
+    // Show publish form for Admin or Lecturer
+    if (user.role === 'Administrator' || user.role === 'Lecturer') {
+      document.getElementById('publishSection').classList.remove('hidden');
+    }
+
+    // Automatic Grade Calculation
+    function calculateGrade(marks) {
+      const score = parseFloat(marks);
+      if (isNaN(score)) return '';
+      if (score >= 80) return 'A';
+      if (score >= 75) return 'A-';
+      if (score >= 70) return 'B+';
+      if (score >= 65) return 'B';
+      if (score >= 60) return 'B-';
+      if (score >= 55) return 'C+';
+      if (score >= 50) return 'C';
+      if (score >= 45) return 'D';
+      return 'F';
+    }
+
+    // Event Listener for automatic grading on input
+    document.getElementById('marks').addEventListener('input', (e) => {
+      const marks = e.target.value;
+      document.getElementById('grade').value = calculateGrade(marks);
+    });
+
+    // Fetch and Load Results
+    async function loadResults() {
+      try {
+        const res = await fetch('/api/results', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const tbody = document.getElementById('resultsTableBody');
+        tbody.innerHTML = '';
+
+        const results = data.data || data;
+
+        if (!results || results.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No results found.</td></tr>`;
+          return;
+        }
+
+        results.forEach(r => {
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-4 font-medium text-slate-800">${r.student_name || 'Student #' + r.student_id}</td>
+              <td class="p-4">${r.course_code || 'CS101'} - ${r.course_name || 'Course'}</td>
+              <td class="p-4 font-semibold">${r.marks}</td>
+              <td class="p-4">
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded font-bold text-xs">${r.grade}</span>
+              </td>
+              <td class="p-4">
+                <span class="px-2 py-1 ${parseFloat(r.marks) >= 50 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} rounded text-xs font-medium">
+                  ${parseFloat(r.marks) >= 50 ? 'PASS' : 'FAIL'}
+                </span>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Submit New Result
+    document.getElementById('publishForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Publishing...';
+
+      const payload = {
+        student_id: document.getElementById('student_id').value,
+        examination_id: document.getElementById('examination_id').value,
+        marks: document.getElementById('marks').value,
+        grade: document.getElementById('grade').value
+      };
+
+      try {
+        const res = await fetch('/api/results', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || 'Failed to publish result');
+
+        showAlert('Result published and notification sent!', 'bg-green-100 text-green-700');
+        document.getElementById('publishForm').reset();
+        loadResults();
+      } catch (err) {
+        showAlert(err.message, 'bg-red-100 text-red-700');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Publish Result';
+      }
+    });
+
+    function showAlert(msg, colorClass) {
+      const alert = document.getElementById('alertBox');
+      alert.className = `mb-4 p-3 text-sm rounded-lg ${colorClass}`;
+      alert.textContent = msg;
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 4000);
+    }
+
+    loadResults();
+  </script>
+</body>
+</html>

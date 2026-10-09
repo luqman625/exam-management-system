@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Examinations - Exam System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r min-h-screen p-4 space-y-2">
+      <div class="font-bold text-lg text-slate-800 px-4 py-2 mb-4 border-b">Exam Portal</div>
+      <a href="dashboard.html" class="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Dashboard</a>
+      <a href="examinations.html" class="block px-4 py-2 bg-blue-50 text-blue-600 font-medium rounded-lg">Examinations</a>
+      <a href="results.html" class="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Results</a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800">Examination Schedule</h2>
+          <p class="text-sm text-slate-500">View and manage exam timetables</p>
+        </div>
+        <!-- Admin/Lecturer Only Button -->
+        <button id="addExamBtn" onclick="openAddModal()" 
+                class="hidden bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow transition">
+          + Add New Exam
+        </button>
+      </div>
+
+      <!-- Alert Message -->
+      <div id="pageAlert" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
+
+      <!-- Examinations Table -->
+      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-100 border-b text-sm font-semibold text-slate-700">
+            <tr>
+              <th class="p-4">Course</th>
+              <th class="p-4">Venue & Building</th>
+              <th class="p-4">Date</th>
+              <th class="p-4">Time</th>
+              <th class="p-4">Action</th>
+            </tr>
+          </thead>
+          <tbody id="examTableBody" class="divide-y text-sm">
+            <tr><td colspan="5" class="p-4 text-center text-slate-400">Loading examinations...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div id="qrModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white p-6 rounded-xl max-w-sm w-full text-center shadow-xl">
+      <h3 class="font-bold text-lg mb-4 text-slate-800">Examination Entry Slip</h3>
+      <img id="qrImage" class="mx-auto mb-4 border p-2 rounded" src="" alt="QR Slip">
+      <button onclick="closeModal('qrModal')" class="w-full bg-slate-800 text-white py-2 rounded-lg font-medium">Close</button>
+    </div>
+  </div>
+
+  <!-- Add New Exam Modal (For Admin / Lecturer) -->
+  <div id="addExamModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white p-6 rounded-xl max-w-lg w-full shadow-xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <h3 class="font-bold text-lg text-slate-800">Schedule New Examination</h3>
+        <button onclick="closeModal('addExamModal')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <form id="addExamForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Course Code / ID</label>
+          <input type="number" id="course_id" required placeholder="Course ID (e.g., 1)" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Venue Name</label>
+            <input type="text" id="venue_name" required placeholder="e.g. Hall A" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Building</label>
+            <input type="text" id="building" required placeholder="e.g. Block C" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Exam Date</label>
+          <input type="date" id="exam_date" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Start Time</label>
+            <input type="time" id="start_time" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">End Time</label>
+            <input type="time" id="end_time" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Exam Type</label>
+          <select id="exam_type" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="Final">Final Examination</option>
+            <option value="Midterm">Midterm Examination</option>
+            <option value="Practical">Practical Examination</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t">
+          <button type="button" onclick="closeModal('addExamModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save Schedule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    const token = localStorage.getItem('token');
+
+    // Redirect to login if unauthenticated
+    if (!token || !user) {
+      window.location.href = '/index.html';
+    }
+
+    // Unhide the "Add New Exam" button for Admins or Lecturers
+    if (user.role === 'Administrator' || user.role === 'Lecturer') {
+      document.getElementById('addExamBtn').classList.remove('hidden');
+    }
+
+    // Modal Control Functions
+    function openAddModal() { document.getElementById('addExamModal').classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // Fetch and Load Exams
+    async function loadExams() {
+      try {
+        const res = await fetch('/api/examinations', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const tbody = document.getElementById('examTableBody');
+        tbody.innerHTML = '';
+
+        const exams = data.data || data;
+
+        if (!exams || exams.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No scheduled examinations found.</td></tr>`;
+          return;
+        }
+
+        exams.forEach(e => {
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-4 font-medium text-slate-800">${e.course_code || 'CS101'} - ${e.course_name || 'Exam'}</td>
+              <td class="p-4">${e.venue_name} (${e.building})</td>
+              <td class="p-4">${e.exam_date ? e.exam_date.split('T')[0] : 'N/A'}</td>
+              <td class="p-4">${e.start_time} - ${e.end_time}</td>
+              <td class="p-4">
+                <button onclick="viewQR(${e.examination_id})" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded-md text-xs font-semibold transition">
+                  Get QR Slip
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Handle Form Submit (Add New Exam)
+    document.getElementById('addExamForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        course_id: document.getElementById('course_id').value,
+        venue_name: document.getElementById('venue_name').value,
+        building: document.getElementById('building').value,
+        exam_date: document.getElementById('exam_date').value,
+        start_time: document.getElementById('start_time').value,
+        end_time: document.getElementById('end_time').value,
+        exam_type: document.getElementById('exam_type').value
+      };
+
+      try {
+        const res = await fetch('/api/examinations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || 'Failed to create examination');
+
+        showAlert('Examination scheduled successfully!', 'bg-green-100 text-green-700');
+        closeModal('addExamModal');
+        document.getElementById('addExamForm').reset();
+        loadExams();
+      } catch (err) {
+        showAlert(err.message, 'bg-red-100 text-red-700');
+      }
+    });
+
+    // View QR Code
+    async function viewQR(id) {
+      try {
+        const res = await fetch(`/api/examinations/${id}/qrcode`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        document.getElementById('qrImage').src = data.qr_code;
+        document.getElementById('qrModal').classList.remove('hidden');
+      } catch (err) {
+        alert('Could not fetch QR code');
+      }
+    }
+
+    function showAlert(msg, colorClass) {
+      const alert = document.getElementById('pageAlert');
+      alert.className = `mb-4 p-3 text-sm rounded-lg ${colorClass}`;
+      alert.textContent = msg;
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 4000);
+    }
+
+    loadExams();
+  </script>
+</body>
+</html>
